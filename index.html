@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Staff rota</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #13302c; --muted: #57706b; --surface: #f3f7f5; --card: #ffffff; --line: #d5e2dd;
+    --primary: #0e6b5c; --primary-ink: #ffffff; --open: #f4a62a; --open-soft: #fdf0d6;
+    --full: #c2304a; --full-soft: #f8e1e5; --today: #0e6b5c; --today-soft: #dcefe9;
+    --pill-ink: #13302c;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ink: #e4efec; --muted: #9fb7b1; --surface: #0f1d1b; --card: #172a27; --line: #2a423e;
+      --primary: #3fb39c; --primary-ink: #0f1d1b; --open: #f4b54a; --open-soft: #3a2f17;
+      --full: #ef7d92; --full-soft: #3b1f26; --today: #3fb39c; --today-soft: #1d3b35;
+      color-scheme: dark;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  body {
+    margin: 0; background: var(--surface); color: var(--ink);
+    font: 16px/1.45 "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+    padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px);
+  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 16px 16px 48px; }
+  .top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  h1 { font-size: 1.45rem; line-height: 1.2; margin: 4px 0; }
+  .range { color: var(--muted); margin: 0 0 14px; }
+  .btn {
+    font: inherit; font-weight: 700; border: 0; border-radius: 8px; padding: 10px 14px; cursor: pointer;
+    background: var(--primary); color: var(--primary-ink); white-space: nowrap;
+  }
+  .btn.quiet { background: transparent; color: var(--primary); border: 1px solid var(--line); }
+  .btn.small { padding: 6px 10px; font-size: .9rem; }
+  .btn.danger { background: transparent; color: var(--full); border: 1px solid var(--line); }
+  .btn:disabled { opacity: .55; cursor: progress; }
+  :focus-visible { outline: 3px solid var(--open); outline-offset: 2px; }
+
+  .switch { display: flex; gap: 4px; background: var(--line); padding: 4px; border-radius: 10px; margin-bottom: 12px; }
+  .switch button { flex: 1; border: 0; border-radius: 7px; padding: 10px 6px; font: inherit; font-weight: 700;
+                   background: transparent; color: var(--ink); cursor: pointer; }
+  .switch button[aria-pressed="true"] { background: var(--card); box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+  .badge { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 999px; font-size: .72rem;
+           background: var(--open); color: #2b1d00; vertical-align: 2px; }
+
+  .panel { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin-bottom: 12px; }
+  .panel p { margin: 0 0 10px; }
+  .bar { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .signin { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; }
+  @media (max-width: 480px) { .signin { grid-template-columns: 1fr 1fr; } .signin .btn { grid-column: 1 / -1; } }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  select, input { font: inherit; padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px;
+                  background: var(--surface); color: var(--ink); min-width: 0; }
+
+  details.day { background: var(--card); border: 1px solid var(--line); border-radius: 10px; margin-bottom: 8px; }
+  details.day.today { border: 2px solid var(--today); background: var(--today-soft); }
+  details.day > summary { list-style: none; cursor: pointer; display: grid; grid-template-columns: 52px 1fr auto;
+                          gap: 10px; align-items: center; padding: 10px 12px; }
+  details.day > summary::-webkit-details-marker { display: none; }
+  .date { text-align: center; }
+  .num { display: block; font-size: 1.7rem; font-weight: 700; line-height: 1; }
+  .dow { display: block; color: var(--muted); font-size: .85rem; }
+  .today .num { color: var(--today); }
+  .sum { color: var(--muted); font-size: .95rem; }
+  .sum strong { color: var(--ink); }
+  .chev { color: var(--muted); transition: transform .15s; }
+  details[open] .chev { transform: rotate(90deg); }
+  .tag-today { display: inline-block; background: var(--today); color: var(--primary-ink); font-size: .72rem;
+               font-weight: 700; padding: 1px 7px; border-radius: 999px; margin-right: 6px; vertical-align: 1px; }
+  .day-body { padding: 0 12px 12px; }
+  .closed { color: var(--full); font-weight: 700; }
+
+  .shift { background: var(--card); border: 1px solid var(--line); border-left: 5px solid var(--open);
+           border-radius: 8px; padding: 10px 12px; margin-top: 8px; }
+  .shift.full { border-left-color: var(--full); }
+  .shift-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .time { font-weight: 700; font-size: 1.05rem; }
+  .role { color: var(--muted); font-size: .9rem; margin-left: 6px; font-weight: 400; }
+  .slots { font-size: .85rem; padding: 2px 8px; border-radius: 999px; background: var(--open-soft); white-space: nowrap; }
+  .shift.full .slots { background: var(--full-soft); }
+  .people { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .pill { padding: 3px 10px; border-radius: 999px; font-size: .95rem; color: var(--pill-ink);
+          border: 1px solid rgba(0,0,0,.08); }
+  .pill.mine { font-weight: 700; box-shadow: 0 0 0 2px var(--ink); }
+  .actions { margin-top: 10px; }
+
+  .admin-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; }
+  .admin-row select { flex: 1 1 140px; }
+  .admin-add { display: flex; gap: 6px; margin-top: 10px; }
+  .admin-add select { flex: 1; }
+  .muted { color: var(--muted); }
+
+  .maint { min-height: 70vh; display: flex; flex-direction: column; align-items: center; justify-content: center;
+           text-align: center; padding: 24px; }
+  .maint .icon { font-size: 2.6rem; margin-bottom: 8px; }
+  .maint h2 { margin: 0 0 6px; font-size: 1.4rem; }
+  .maint p { color: var(--muted); margin: 0 0 18px; max-width: 32ch; }
+
+  #msg { position: fixed; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
+         max-width: calc(100% - 32px); background: var(--ink); color: var(--surface); padding: 10px 14px;
+         border-radius: 8px; display: none; z-index: 5; }
+  #msg.show { display: block; }
+  #msg.error { background: var(--full); color: #fff; }
+  .loading { color: var(--muted); padding: 24px 0; }
+</style>
+</head>
+<body>
+<main class="wrap" id="app"><p class="loading">Loading the rota…</p></main>
+<div id="msg" role="status" aria-live="polite"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  var PILL = { Teal: '#b8e4dc', Mango: '#fde1a8', Hibiscus: '#f7c4cf', Lilac: '#ddd0f2', Sky: '#c6e2f7',
+               Lime: '#d9eeb0', Coral: '#f9cdb6', Sand: '#ece0c8', Rose: '#f3cde6', Slate: '#d3dbe0' };
+  var MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  var TIMEOUT_MS = 25000;
+
+  var API = null;
+  var state = {
+    rota: null, view: 'current', maint: false, pending: null,
+    me: null, pin: null, role: '', admin: false, picks: false, showSignIn: false, pickName: '',
+    open: {}, adminDate: null, adminDay: null, sel: {}
+  };
+
+  /* ---------------- helpers ---------------- */
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function dayNum(ymd) { return Number(ymd.slice(8, 10)); }
+  function monthName(ymd) { return MONTHS[Number(ymd.slice(5, 7)) - 1]; }
+  function rangeText(w) {
+    var sm = monthName(w.start), em = monthName(w.end);
+    return 'Monday ' + dayNum(w.start) + (sm !== em ? ' ' + sm : '') + ' to Sunday ' + dayNum(w.end) + ' ' + em + ' ' + w.end.slice(0, 4);
+  }
+  function say(text, isError) {
+    var m = document.getElementById('msg');
+    m.textContent = text;
+    m.className = 'show' + (isError ? ' error' : '');
+    clearTimeout(say.t);
+    say.t = setTimeout(function () { m.className = ''; }, isError ? 6000 : 3000);
+  }
+  function pill(p) {
+    return '<span class="pill' + (p.name === state.me ? ' mine' : '') + '" style="background:' +
+      (PILL[p.colour] || PILL.Slate) + '">' + esc(p.name) + '</span>';
+  }
+
+  /* ---------------- API ---------------- */
+  function validApiUrl(u) {
+    if (/^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec$/.test(u)) return true;
+    var local = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+    return local && /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/exec$/.test(u);
+  }
+
+  function api(payload) {
+    var ctrl = new AbortController();
+    var timer = setTimeout(function () { ctrl.abort(); }, TIMEOUT_MS);
+    var isGet = typeof payload === 'string';
+    var req = isGet
+      ? fetch(API + '?action=' + encodeURIComponent(payload), { method: 'GET', credentials: 'omit', signal: ctrl.signal })
+      : fetch(API, { method: 'POST', credentials: 'omit', signal: ctrl.signal,
+                     headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payload) });
+    return req
+      .then(function (r) { if (!r.ok) throw { maintenance: true }; return r.json(); })
+      .catch(function () { throw { maintenance: true }; })
+      .then(function (j) {
+        clearTimeout(timer);
+        if (j && j.ok) return j.data;
+        if (j && j.error) throw { user: j.error };
+        throw { maintenance: true };
+      }, function (e) { clearTimeout(timer); throw e; });
+  }
+
+  /** Runs one request with a busy state on the button that started it. */
+  function run(key, payload, onOk) {
+    if (state.pending) return;
+    state.pending = key; render();
+    api(payload).then(function (data) {
+      state.pending = null; onOk(data); render();
+    }, function (err) {
+      state.pending = null;
+      if (err && err.user) say(err.user, true);
+      else state.maint = true;
+      render();
+    });
+  }
+
+  function boot() {
+    state.maint = false; state.pending = 'boot'; render();
+    fetch('config.json', { cache: 'no-store' })
+      .then(function (r) { if (!r.ok) throw 0; return r.json(); })
+      .then(function (cfg) {
+        if (!cfg || !validApiUrl(String(cfg.apiUrl || ''))) throw 0;
+        API = cfg.apiUrl;
+        state.pending = null;
+        load();
+      })
+      .catch(function () { state.pending = null; state.maint = true; render(); });
+  }
+
+  function load() {
+    run('refresh', 'rota', function (rota) { state.rota = rota; });
+  }
+
+  /* ---------------- actions ---------------- */
+  function signIn() {
+    var name = document.getElementById('who').value;
+    var pin = document.getElementById('pin').value.trim();
+    state.pickName = name;
+    run('signin', { action: 'signIn', name: name, pin: pin }, function (res) {
+      state.me = res.name; state.pin = pin; state.role = res.role || '';
+      state.admin = !!res.admin; state.picks = !!res.picks; state.showSignIn = false;
+      say('Signed in as ' + res.name + '.');
+    });
+  }
+  function signOut() {
+    state.me = state.pin = null; state.role = ''; state.admin = state.picks = false;
+    state.adminDay = null;
+    if (state.view === 'admin') state.view = 'current';
+    render();
+  }
+  function take(date, id) {
+    run('take:' + date + id, { action: 'claim', name: state.me, pin: state.pin, date: date, shiftId: id },
+      function (rota) { state.rota = rota; say('Shift taken.'); });
+  }
+  function drop(date, id) {
+    run('drop:' + date + id, { action: 'release', name: state.me, pin: state.pin, date: date, shiftId: id },
+      function (rota) { state.rota = rota; say('Shift dropped.'); });
+  }
+  /** Day lookups can overlap (date changed quickly); the latest chosen date always wins. */
+  function loadAdminDay() {
+    var want = state.adminDate;
+    state.adminLoading = want; render();
+    api({ action: 'adminDay', name: state.me, pin: state.pin, date: want }).then(function (day) {
+      if (day.date === state.adminDate) state.adminDay = day;
+      if (state.adminLoading === want) state.adminLoading = null;
+      render();
+    }, function (err) {
+      if (state.adminLoading === want) state.adminLoading = null;
+      if (err && err.user) say(err.user, true); else state.maint = true;
+      render();
+    });
+  }
+  function adminChange(op, shiftId, person, newPerson) {
+    run('admin:' + op + shiftId + person, {
+      action: 'adminChange', name: state.me, pin: state.pin, date: state.adminDate,
+      op: op, shiftId: shiftId, person: person, newPerson: newPerson
+    }, function (res) {
+      state.adminDay = res.day; state.rota = res.rota; state.sel = {};
+      say(op === 'add' ? 'Added.' : op === 'remove' ? 'Removed.' : 'Replaced.');
+    });
+  }
+
+  /* ---------------- rendering ---------------- */
+  function busy(key) { return state.pending === key; }
+  function anyBusy() { return !!state.pending; }
+
+  function myShift(d) {
+    if (!state.me) return null;
+    for (var i = 0; i < d.shifts.length; i++) {
+      if (d.shifts[i].people.some(function (p) { return p.name === state.me; })) return d.shifts[i];
+    }
+    return null;
+  }
+
+  function daySummary(d, isNext) {
+    if (d.closed) return '<span class="closed">Closed</span>';
+    if (!d.shifts.length) return 'No shifts';
+    var mine = myShift(d);
+    var you = mine ? '<strong>You: ' + esc(mine.start) + '–' + esc(mine.end) + '</strong> · ' : '';
+    if (isNext) {
+      var open = d.shifts.reduce(function (n, s) { return n + Math.max(0, s.needed - s.people.length); }, 0);
+      return you + (open ? open + ' open slot' + (open === 1 ? '' : 's') : 'All shifts full');
+    }
+    var names = {};
+    d.shifts.forEach(function (s) { s.people.forEach(function (p) { names[p.name] = 1; }); });
+    var n = Object.keys(names).length;
+    return you + n + ' on shift';
+  }
+
+  function shiftCard(d, s, canPick) {
+    var mine = state.me && s.people.some(function (p) { return p.name === state.me; });
+    var mineFromApp = state.me && s.people.some(function (p) { return p.name === state.me && String(p.source).toLowerCase() === 'app'; });
+    var action = '';
+    if (canPick && state.me && state.picks) {
+      var k = d.date + s.id;
+      if (mineFromApp) {
+        action = '<button type="button" class="btn quiet" data-act="drop" data-date="' + d.date + '" data-id="' + esc(s.id) + '"' +
+          (anyBusy() ? ' disabled' : '') + '>' + (busy('drop:' + k) ? 'Dropping…' : 'Drop shift') + '</button>';
+      } else if (!mine && !s.full && (!s.role || s.role.toLowerCase() === state.role.toLowerCase())) {
+        action = '<button type="button" class="btn" data-act="take" data-date="' + d.date + '" data-id="' + esc(s.id) + '"' +
+          (anyBusy() ? ' disabled' : '') + '>' + (busy('take:' + k) ? 'Taking…' : 'Take shift') + '</button>';
+      }
+    }
+    return '<div class="shift' + (s.full ? ' full' : '') + '">' +
+      '<div class="shift-top"><span class="time">' + esc(s.start) + '–' + esc(s.end) +
+      (s.role ? '<span class="role">' + esc(s.role) + '</span>' : '') + '</span>' +
+      '<span class="slots">' + (s.full ? 'Full' : s.people.length + ' of ' + s.needed + ' taken') + '</span></div>' +
+      (s.people.length ? '<div class="people">' + s.people.map(pill).join('') + '</div>' : '') +
+      (action ? '<div class="actions">' + action + '</div>' : '') + '</div>';
+  }
+
+  function weekHtml(week, isNext) {
+    var r = state.rota;
+    var canPick = isNext && r.pickingOpen;
+    return week.days.map(function (d) {
+      var key = (isNext ? 'n:' : 'c:') + d.date;
+      var isToday = !isNext && d.date === r.today;
+      if (state.open[key] === undefined) state.open[key] = isToday;
+      var body = d.closed
+        ? '<p class="closed">Closed' + (d.closedReason ? ' – ' + esc(d.closedReason) : '') + '</p>'
+        : d.shifts.length ? d.shifts.map(function (s) { return shiftCard(d, s, canPick); }).join('')
+        : '<p class="muted">No shifts set.</p>';
+      return '<details class="day' + (isToday ? ' today' : '') + '" data-key="' + key + '"' + (state.open[key] ? ' open' : '') + '>' +
+        '<summary><span class="date"><span class="num">' + dayNum(d.date) + '</span><span class="dow">' + d.day + '</span></span>' +
+        '<span class="sum">' + (isToday ? '<span class="tag-today">Today</span>' : '') + daySummary(d, isNext) + '</span>' +
+        '<span class="chev" aria-hidden="true">›</span></summary>' +
+        '<div class="day-body">' + body + '</div></details>';
+    }).join('');
+  }
+
+  function accountHtml() {
+    var r = state.rota;
+    if (state.me) {
+      return '<div class="panel bar"><span>Signed in as <strong>' + esc(state.me) + '</strong>' +
+        (state.admin ? ' · Admin' : '') + '</span>' +
+        '<button type="button" class="btn quiet small" id="signout">Sign out</button></div>';
+    }
+    var pickingNudge = state.view === 'next' && r.pickingOpen;
+    if (!state.showSignIn && !pickingNudge) {
+      return '<div class="panel bar"><span class="muted">Staff and admins: sign in to pick or manage shifts.</span>' +
+        '<button type="button" class="btn quiet small" id="showsignin">Sign in</button></div>';
+    }
+    var opts = '<option value="">Your name</option>' + r.pickers.map(function (n) {
+      return '<option' + (n === state.pickName ? ' selected' : '') + '>' + esc(n) + '</option>';
+    }).join('');
+    return '<div class="panel">' +
+      (pickingNudge ? '<p>Picking is open for next week. Sign in to take shifts. Full shifts are locked.</p>' : '') +
+      '<div class="signin"><label class="sr" for="who">Your name</label><select id="who">' + opts + '</select>' +
+      '<label class="sr" for="pin">PIN</label><input id="pin" type="password" inputmode="numeric" autocomplete="off" placeholder="PIN">' +
+      '<button type="button" class="btn" id="signin"' + (anyBusy() ? ' disabled' : '') + '>' +
+      (busy('signin') ? 'Signing in…' : 'Sign in') + '</button></div></div>';
+  }
+
+  function adminHtml() {
+    if (!state.adminDate) state.adminDate = state.rota.today;
+    var h = '<div class="panel"><label for="adate"><strong>Date</strong></label> ' +
+      '<input type="date" id="adate" value="' + esc(state.adminDate) + '"> ' +
+      '<p class="muted" style="margin:8px 0 0">Pick any date to see who is on, or to add, remove or replace people.</p></div>';
+    var d = state.adminDay;
+    if (!d || d.date !== state.adminDate) {
+      return h + '<p class="loading">' + (state.adminLoading ? 'Loading…' : '') + '</p>';
+    }
+    h += '<h2 style="font-size:1.1rem;margin:4px 0 8px">' + d.day + ' ' + dayNum(d.date) + ' ' + monthName(d.date) + ' ' + d.date.slice(0, 4) + '</h2>';
+    if (d.closed) return h + '<p class="closed">Closed' + (d.closedReason ? ' – ' + esc(d.closedReason) : '') + '</p>';
+    if (!d.shifts.length) return h + '<p class="muted">No shifts set for this day.</p>';
+    var dis = anyBusy() ? ' disabled' : '';
+    d.shifts.forEach(function (s) {
+      var onIt = s.people.map(function (p) { return p.name; });
+      var others = d.staff.filter(function (n) { return onIt.indexOf(n) < 0; });
+      h += '<div class="shift' + (s.full ? ' full' : '') + '"><div class="shift-top"><span class="time">' + esc(s.start) + '–' + esc(s.end) +
+        (s.role ? '<span class="role">' + esc(s.role) + '</span>' : '') + '</span><span class="slots">' +
+        (s.full ? 'Full' : s.people.length + ' of ' + s.needed + ' taken') + '</span></div>';
+      s.people.forEach(function (p) {
+        var k = 'r|' + s.id + '|' + p.name;
+        h += '<div class="admin-row">' + pill(p) +
+          '<select data-sel="' + esc(k) + '" aria-label="Replace ' + esc(p.name) + ' with"><option value="">Replace with…</option>' +
+          others.map(function (n) { return '<option' + (state.sel[k] === n ? ' selected' : '') + '>' + esc(n) + '</option>'; }).join('') +
+          '</select><button type="button" class="btn small" data-admin="replace" data-id="' + esc(s.id) + '" data-person="' + esc(p.name) + '"' + dis + '>' +
+          (busy('admin:replace' + s.id + p.name) ? 'Saving…' : 'Replace') + '</button>' +
+          '<button type="button" class="btn danger small" data-admin="remove" data-id="' + esc(s.id) + '" data-person="' + esc(p.name) + '"' + dis + '>' +
+          (busy('admin:remove' + s.id + p.name) ? 'Removing…' : 'Remove') + '</button></div>';
+      });
+      if (!s.full) {
+        var ka = 'a|' + s.id;
+        h += '<div class="admin-add"><select data-sel="' + esc(ka) + '" aria-label="Add to shift"><option value="">Add someone…</option>' +
+          others.map(function (n) { return '<option' + (state.sel[ka] === n ? ' selected' : '') + '>' + esc(n) + '</option>'; }).join('') +
+          '</select><button type="button" class="btn small" data-admin="add" data-id="' + esc(s.id) + '"' + dis + '>' +
+          (busy('admin:add' + s.id + (state.sel[ka] || '')) ? 'Adding…' : 'Add') + '</button></div>';
+      }
+      h += '</div>';
+    });
+    return h;
+  }
+
+  function maintHtml() {
+    return '<div class="maint"><div class="icon" aria-hidden="true">🛠️</div><h2>Down for maintenance</h2>' +
+      '<p>The rota is being updated. Please contact the admin.</p>' +
+      '<button type="button" class="btn quiet" id="retry">Try again</button></div>';
+  }
+
+  function render() {
+    var app = document.getElementById('app');
+    if (state.maint) { document.getElementById('msg').className = ''; app.innerHTML = maintHtml(); bind(); return; }
+    var r = state.rota;
+    if (!r) { app.innerHTML = '<p class="loading">Loading the rota…</p>'; return; }
+    document.title = r.restaurant + ' – rota';
+
+    var week = state.view === 'next' ? r.next : r.current;
+    var main;
+    if (state.view === 'admin' && state.admin) main = adminHtml();
+    else main = weekHtml(week, state.view === 'next');
+
+    app.innerHTML =
+      '<div class="top"><h1>' + esc(r.restaurant) + '</h1>' +
+      '<button type="button" class="btn quiet small" id="refresh"' + (anyBusy() ? ' disabled' : '') + '>' +
+      (busy('refresh') ? 'Refreshing…' : '↻ Refresh') + '</button></div>' +
+      '<p class="range">' + (state.view === 'admin' ? 'Admin' : rangeText(week)) + '</p>' +
+      '<div class="switch" role="group" aria-label="Choose view">' +
+      '<button type="button" data-view="current" aria-pressed="' + (state.view === 'current') + '">This week</button>' +
+      '<button type="button" data-view="next" aria-pressed="' + (state.view === 'next') + '">Next week' +
+      (r.pickingOpen ? '<span class="badge">Picking open</span>' : '') + '</button>' +
+      (state.admin ? '<button type="button" data-view="admin" aria-pressed="' + (state.view === 'admin') + '">Admin</button>' : '') +
+      '</div>' + accountHtml() + '<div id="main">' + main + '</div>';
+    bind();
+  }
+
+  function bind() {
+    var el = function (id) { return document.getElementById(id); };
+    if (el('retry')) el('retry').onclick = boot;
+    if (el('refresh')) el('refresh').onclick = function () {
+      if (state.view === 'admin') loadAdminDay(); else load();
+    };
+    if (el('signout')) el('signout').onclick = signOut;
+    if (el('showsignin')) el('showsignin').onclick = function () { state.showSignIn = true; render(); };
+    if (el('signin')) el('signin').onclick = signIn;
+    if (el('pin')) el('pin').onkeydown = function (e) { if (e.key === 'Enter') signIn(); };
+    if (el('adate')) el('adate').onchange = function () {
+      if (!this.value) return;
+      state.adminDate = this.value; state.adminDay = null; state.sel = {}; loadAdminDay();
+    };
+    document.querySelectorAll('[data-view]').forEach(function (b) {
+      b.onclick = function () {
+        state.view = b.getAttribute('data-view');
+        if (state.view === 'admin' && !state.adminDay && !state.adminLoading) {
+          if (!state.adminDate) state.adminDate = state.rota.today;
+          loadAdminDay();
+        } else render();
+      };
+    });
+    document.querySelectorAll('details.day').forEach(function (d) {
+      d.addEventListener('toggle', function () { state.open[d.getAttribute('data-key')] = d.open; });
+    });
+    document.querySelectorAll('button[data-act]').forEach(function (b) {
+      b.onclick = function () {
+        (b.getAttribute('data-act') === 'take' ? take : drop)(b.getAttribute('data-date'), b.getAttribute('data-id'));
+      };
+    });
+    document.querySelectorAll('select[data-sel]').forEach(function (s) {
+      s.onchange = function () { state.sel[s.getAttribute('data-sel')] = s.value; };
+    });
+    document.querySelectorAll('button[data-admin]').forEach(function (b) {
+      b.onclick = function () {
+        var op = b.getAttribute('data-admin'), id = b.getAttribute('data-id'), person = b.getAttribute('data-person');
+        if (op === 'add') {
+          var who = state.sel['a|' + id];
+          if (!who) return say('Choose someone to add.', true);
+          adminChange('add', id, who);
+        } else if (op === 'remove') {
+          if (confirm('Remove ' + person + ' from this shift?')) adminChange('remove', id, person);
+        } else {
+          var to = state.sel['r|' + id + '|' + person];
+          if (!to) return say('Choose who replaces ' + person + '.', true);
+          adminChange('replace', id, person, to);
+        }
+      };
+    });
+  }
+
+  boot();
+})();
+</script>
+</body>
+</html>
